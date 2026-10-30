@@ -1,26 +1,297 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* ───────────────────────────────────────────────────────────
+   PAYAL STUDIOS
+   Tokens taken from the Concept A — Noir document. Warm paper
+   and bronze by day, warm black and gold by night; the whole
+   site reads as film seen inside a camera.
+   ─────────────────────────────────────────────────────────── */
+
+@theme {
+  /* type */
+  --font-serif: var(--font-fraunces), "Iowan Old Style", Georgia, serif;
+  --font-sans: var(--font-archivo), "Helvetica Neue", Arial, sans-serif;
+  --font-mono: var(--font-space-mono), ui-monospace, Menlo, Consolas, monospace;
+
+  /* A restrained editorial scale — the concept never shouts. */
+  --text-step--1: 0.8rem;
+  --text-step-0: 1.0625rem;
+  --text-step-1: 1.31rem;
+  --text-step-2: 1.72rem;
+  --text-step-3: 2.29rem;
+  --text-step-4: 3.05rem;
+  --text-step-5: clamp(2.8rem, 7vw, 4.6rem);
+
+  /* measure */
+  --measure: 40rem;
+  --wide: 69rem;
+
+  --ease-gate: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-shutter: cubic-bezier(0.7, 0, 0.2, 1);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* ─── palette: light is the default, dark is a real second skin ─── */
+
+:root {
+  --bg: #f3eee4;
+  --surface: #fbf7ef;
+  --text: #211c15;
+  --text-dim: #6a5f51;
+  --line: rgba(33, 28, 21, 0.14);
+  --line-soft: rgba(33, 28, 21, 0.07);
+  --accent: #a6712a;
+  --glow: rgba(166, 113, 42, 0.16);
+  --sprocket: rgba(33, 28, 21, 0.09);
+  --grain-opacity: 0.05;
+  --pad: clamp(1.25rem, 5vw, 3.5rem);
+
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  --bg: #0c0a08;
+  --surface: #141110;
+  --text: #f2ece1;
+  --text-dim: #a89c8b;
+  --line: rgba(242, 236, 225, 0.13);
+  --line-soft: rgba(242, 236, 225, 0.06);
+  --accent: #d8a84e;
+  --glow: rgba(216, 168, 78, 0.2);
+  --sprocket: rgba(242, 236, 225, 0.09);
+  --grain-opacity: 0.045;
+
+  color-scheme: dark;
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  :root:not([data-theme="light"]) {
+    --bg: #0c0a08;
+    --surface: #141110;
+    --text: #f2ece1;
+    --text-dim: #a89c8b;
+    --line: rgba(242, 236, 225, 0.13);
+    --line-soft: rgba(242, 236, 225, 0.06);
+    --accent: #d8a84e;
+    --glow: rgba(216, 168, 78, 0.2);
+    --sprocket: rgba(242, 236, 225, 0.09);
+    --grain-opacity: 0.045;
+
+    color-scheme: dark;
   }
 }
 
+/* Expose the runtime palette to Tailwind utilities. */
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-ink: var(--text);
+  --color-ink-dim: var(--text-dim);
+  --color-accent: var(--accent);
+  --color-line: var(--line);
+}
+
+/* ─── base ─── */
+
+html {
+  background-color: var(--bg);
+  scroll-behavior: auto;
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: var(--text-step-0);
+  line-height: 1.6;
+  font-synthesis-weight: none;
+  overflow-x: clip;
+  transition: background-color 0.5s var(--ease-gate), color 0.5s var(--ease-gate);
+}
+
+::selection {
+  background-color: var(--accent);
+  color: var(--bg);
+}
+
+/* Lenis */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+.lenis.lenis-stopped {
+  overflow: clip;
+}
+
+:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 3px;
+}
+
+/* ─── editorial primitives from the concept ─── */
+
+@utility eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  font-family: var(--font-mono);
+  font-size: var(--text-step--1);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+@utility lede {
+  font-family: var(--font-serif);
+  font-size: var(--text-step-1);
+  font-weight: 400;
+  line-height: 1.4;
+  color: var(--text-dim);
+}
+
+@utility display-type {
+  font-family: var(--font-serif);
+  font-size: var(--text-step-5);
+  font-weight: 400;
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+}
+
+@utility title-type {
+  font-family: var(--font-serif);
+  font-size: var(--text-step-3);
+  font-weight: 400;
+  line-height: 1.12;
+}
+
+@utility mono-label {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+/*
+ * The studio's wordmark, painted rather than drawn.
+ *
+ * The supplied file is a pure-white shape on transparency, so it is used as a
+ * mask and filled with `currentColor`. That way one asset serves both themes
+ * and picks up hover colours, where two tinted copies would need swapping on
+ * every theme change and would still be the wrong colour on hover.
+ *
+ * A masked box has no intrinsic size, so the ratio is pinned here to the
+ * trimmed artwork (1200 × 560) and callers set the height.
+ */
+@utility wordmark {
+  aspect-ratio: 1200 / 560;
+  background-color: currentColor;
+  -webkit-mask-image: url("/brand/wordmark.png");
+  mask-image: url("/brand/wordmark.png");
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}
+
+@utility rule-line {
+  height: 1px;
+  width: 100%;
+  background-color: var(--line);
+}
+
+/* ─── film sprockets: the strip runs through every chapter ─── */
+
+@utility sprocket-edge {
+  background-image: radial-gradient(
+    circle at center,
+    var(--sprocket) 0 38%,
+    transparent 39%
+  );
+  background-size: 2.2rem 2.2rem;
+  background-repeat: repeat-x;
+}
+
+/* ─── grain ─── */
+
+@keyframes grain-drift {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(-2%, -3%);
+  }
+  50% {
+    transform: translate(2%, 1%);
+  }
+  75% {
+    transform: translate(-1%, 2%);
+  }
+}
+
+.grain-layer {
+  animation: grain-drift 8s steps(4, end) infinite;
+}
+
+@keyframes scroll-hint {
+  0% {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  40% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+}
+
+.scroll-hint-line {
+  animation: scroll-hint 2.2s var(--ease-gate) infinite;
+}
+
+/* ─── short-viewport density (pinned chapters get one screen) ─── */
+
+@media (max-height: 820px) {
+  .short-compact {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+}
+@media (max-height: 760px) {
+  .short-hide-diagram {
+    display: none;
+  }
+}
+@media (max-height: 680px) {
+  .short-hide-note {
+    display: none;
+  }
+}
+
+/* ─── reduced motion ─── */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+
+  .grain-layer,
+  .scroll-hint-line {
+    animation: none !important;
+  }
 }

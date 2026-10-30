@@ -39,3 +39,23 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# generation pipeline
+/.cache
+/scripts/jobs.json
+/public/media/stills/*.webp
+/public/media/sequences/*/
+
+# hand-generated source plates (ingested into public/media)
+/incoming/*
+!/incoming/README.txt
+
+# archived AI assets (not shipped)
+/_archive
+
+# original photographs — 829MB of camera files
+# The site serves the derivatives in public/media/photos, which `npm run photos`
+# builds from these. Committing the originals would push ~830MB to the remote
+# and make every deploy clone it, for files the site never serves.
+/incoming/
+

@@ -1,0 +1,25 @@
+# Netlify build settings for Payal Studios.
+#
+# Next.js is detected automatically and Netlify installs its Next runtime, which
+# is what serves the App Router pages and runs /api/inquiry as a function — so
+# there is no publish directory to set by hand here, and none should be: naming
+# one turns the site into plain static files and the inquiry route stops working.
+
+[build]
+  command = "npm run build"
+
+[build.environment]
+  # Next 16 needs Node 20+; pinned so the build does not drift with Netlify's default
+  NODE_VERSION = "22"
+
+[[headers]]
+  # Photograph derivatives and brand assets are content-addressed by name —
+  # a changed photo gets a new filename — so they can be cached hard.
+  for = "/media/photos/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/brand/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
