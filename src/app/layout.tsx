@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Fraunces, Archivo, Space_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { SmoothScroll } from "@/lib/scroll/SmoothScroll";
 import { MotionBoundary } from "@/lib/scroll/MotionBoundary";
@@ -9,26 +9,58 @@ import { GrainOverlay } from "@/components/chrome/GrainOverlay";
 import { FrameRail } from "@/components/chrome/FrameRail";
 import { studio } from "@/lib/studio";
 
-const fraunces = Fraunces({
+/*
+ * The typefaces are served by this site, not fetched from Google at build time.
+ *
+ * `next/font/google` downloads them during `next build`, which made every
+ * deploy depend on Google's servers being reachable from the build machine —
+ * Netlify's could not reach them and the build died resolving the font module.
+ * Self-hosted there is no build-time network call at all, and no third-party
+ * request from the visitor's browser either.
+ *
+ * Fraunces and Archivo are variable fonts, so one file covers the whole weight
+ * range each; Space Mono is not, so its two weights are separate files.
+ * Run `node scripts/fetch-fonts.mjs` to refresh them.
+ */
+const fraunces = localFont({
   variable: "--font-fraunces",
-  subsets: ["latin"],
-  weight: ["400", "600", "900"],
-  style: ["normal", "italic"],
   display: "swap",
+  adjustFontFallback: "Times New Roman",
+  src: [
+    {
+      path: "./fonts/fraunces-roman-var-latin.woff2",
+      weight: "100 900",
+      style: "normal",
+    },
+    {
+      path: "./fonts/fraunces-italic-var-latin.woff2",
+      weight: "100 900",
+      style: "italic",
+    },
+  ],
 });
 
-const archivo = Archivo({
+const archivo = localFont({
   variable: "--font-archivo",
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
   display: "swap",
+  adjustFontFallback: "Arial",
+  src: [
+    {
+      path: "./fonts/archivo-var-latin.woff2",
+      weight: "100 900",
+      style: "normal",
+    },
+  ],
 });
 
-const spaceMono = Space_Mono({
+const spaceMono = localFont({
   variable: "--font-space-mono",
-  subsets: ["latin"],
-  weight: ["400", "700"],
   display: "swap",
+  adjustFontFallback: "Arial",
+  src: [
+    { path: "./fonts/space-mono-400-latin.woff2", weight: "400", style: "normal" },
+    { path: "./fonts/space-mono-700-latin.woff2", weight: "700", style: "normal" },
+  ],
 });
 
 const title = `${studio.name} — Photography & Creative Production`;

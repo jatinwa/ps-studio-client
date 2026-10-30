@@ -1,12 +1,18 @@
 # Netlify build settings for Payal Studios.
 #
-# Next.js is detected automatically and Netlify installs its Next runtime, which
-# is what serves the App Router pages and runs /api/inquiry as a function — so
-# there is no publish directory to set by hand here, and none should be: naming
-# one turns the site into plain static files and the inquiry route stops working.
+# Next.js is detected automatically and Netlify applies its Next adapter, which
+# serves the App Router pages and runs /api/inquiry as a serverless function.
+# No plugin needs installing or pinning for that — Netlify's docs recommend
+# against pinning it, so it stays updated on every build.
+#
+# `.next` is the publish directory Netlify documents for SSR and hybrid Next
+# sites; it is the build output the adapter reads, not a folder of static files,
+# so it does not turn the site static or disable the inquiry route. It is set
+# here rather than only in the site UI so the setting travels with the code.
 
 [build]
   command = "npm run build"
+  publish = ".next"
 
 [build.environment]
   # Next 16 needs Node 20+; pinned so the build does not drift with Netlify's default
