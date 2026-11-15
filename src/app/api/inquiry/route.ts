@@ -4,6 +4,11 @@ import {
   inquirySchema,
   type InquiryResponse,
 } from "@/lib/inquiry";
+import {
+  emailConfigured,
+  sendInquiryEmail,
+  type InquiryPayload,
+} from "@/lib/email";
 
 /**
  * Inquiry endpoint.
@@ -14,11 +19,22 @@ import {
  * to email instead. A portfolio site that silently swallows leads is worse
  * than one with no form.
  *
- * Configure a destination with INQUIRY_WEBHOOK_URL (any endpoint that accepts
- * JSON — Formspree, Zapier, a Slack/Discord webhook, your own CRM).
+ * Two destinations, either or both:
+ *
+ *   RESEND_API_KEY        emails the studio's inbox (see lib/email.ts)
+ *   INQUIRY_WEBHOOK_URL   POSTs the JSON anywhere that accepts it
+ *
+ * With both set the enquiry goes to both, and the visitor is told it arrived
+ * if ANY destination took it — a dead webhook should not lose a booking that
+ * is already sitting in the studio's inbox. Each failure is logged with the
+ * reference, so a partial delivery can be traced afterwards.
  */
 
-const WEBHOOK = process.env.INQUIRY_WEBHOOK_URL;
+/* Blank is not set: see the `env` helper in lib/email.ts. */
+const WEBHOOK = process.env.INQUIRY_WEBHOOK_URL?.trim() || undefined;
+
+/** Reads secrets, so it must never be pushed to an edge bundle. */
+export const runtime = "nodejs";
 
 /** Crude per-instance throttle. Enough to blunt accidental double-submits. */
 const RATE_WINDOW_MS = 60_000;
@@ -45,6 +61,8 @@ function reference(): string {
   return `PS-${stamp}-${rand}`;
 }
 
+type Attempt = { ok: true } | { ok: false; reason: string };
+
 export async function POST(request: Request) {
   const ip =
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
@@ -66,10 +84,7 @@ export async function POST(request: Request) {
   try {
     body = await request.json();
   } catch {
-    return json(
-      { ok: false, code: "VALIDATION", errors: {} },
-      400,
-    );
+    return json({ ok: false, code: "VALIDATION", errors: {} }, 400);
   }
 
   const parsed = inquirySchema.safeParse(body);
@@ -81,18 +96,23 @@ export async function POST(request: Request) {
   }
 
   const ref = reference();
-  const payload = {
+  const payload: InquiryPayload = {
     reference: ref,
     receivedAt: new Date().toISOString(),
     ...parsed.data,
   };
 
-  if (!WEBHOOK) {
-    // Development fallback. Log it so it isn't lost, and be explicit that
-    // nothing was delivered.
+  const wantsEmail = emailConfigured();
+
+  if (!wantsEmail && !WEBHOOK) {
+    /*
+     * Development fallback. Log it so it isn't lost, and be explicit that
+     * nothing was delivered — the response below says so too.
+     */
     console.warn(
-      `[inquiry] INQUIRY_WEBHOOK_URL is not set — nothing was sent.\n` +
-        `${JSON.stringify(payload, null, 2)}`,
+      "[inquiry] no destination configured (set RESEND_API_KEY, or " +
+        "INQUIRY_WEBHOOK_URL) — nothing was sent.\n" +
+        JSON.stringify(payload, null, 2),
     );
     return json(
       {
@@ -105,40 +125,56 @@ export async function POST(request: Request) {
     );
   }
 
-  try {
-    const res = await fetch(WEBHOOK, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(payload),
-      signal: AbortSignal.timeout(10_000),
-    });
+  /*
+   * Both destinations go at once rather than one after the other: they are
+   * independent, and a slow webhook should not hold up the mail. allSettled,
+   * so one of them throwing cannot cost us the other's result.
+   */
+  const settled = await Promise.allSettled<Attempt | null>([
+    wantsEmail ? sendInquiryEmail(payload) : Promise.resolve(null),
+    WEBHOOK ? forwardToWebhook(payload) : Promise.resolve(null),
+  ]);
 
-    if (!res.ok) {
-      console.error(`[inquiry] webhook responded ${res.status}`);
-      return json(
-        {
-          ok: false,
-          code: "FORWARD_FAILED",
-          message:
-            "We couldn't deliver your inquiry just now. Please try again, or email the studio directly.",
-        },
-        502,
-      );
+  let delivered = false;
+  settled.forEach((outcome, i) => {
+    const which = i === 0 ? "email" : "webhook";
+    if (outcome.status === "rejected") {
+      console.error(`[inquiry ${ref}] ${which} threw`, outcome.reason);
+      return;
     }
-  } catch (error) {
-    console.error("[inquiry] webhook request failed", error);
+    if (outcome.value === null) return; // that destination isn't configured
+    if (outcome.value.ok) delivered = true;
+    else console.error(`[inquiry ${ref}] ${which} failed: ${outcome.value.reason}`);
+  });
+
+  if (!delivered) {
     return json(
       {
         ok: false,
         code: "FORWARD_FAILED",
         message:
-          "We couldn't reach our inquiry service. Please try again, or email the studio directly.",
+          "We couldn't deliver your inquiry just now. Please try again, or contact the studio directly.",
       },
       502,
     );
   }
 
   return json({ ok: true, reference: ref }, 200);
+}
+
+async function forwardToWebhook(payload: InquiryPayload): Promise<Attempt> {
+  try {
+    const res = await fetch(WEBHOOK as string, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!res.ok) return { ok: false, reason: `responded ${res.status}` };
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, reason: `request failed: ${String(error)}` };
+  }
 }
 
 function json(body: InquiryResponse, status: number) {

@@ -59,7 +59,7 @@ export function Preloader() {
       className="pointer-events-none fixed inset-0 z-[180] flex flex-col items-center justify-center bg-bg transition-opacity duration-500"
       style={{ opacity: progress >= 1 ? 0 : 1 }}
     >
-      <p className="font-mono text-[10px] tracking-[0.5em] text-ink sm:text-xs">
+      <p className="font-mono text-[0.75rem] tracking-[0.5em] text-ink">
         {studio.name}
       </p>
       <div className="mt-6 h-px w-40 bg-[var(--hairline)]">

@@ -1,7 +1,9 @@
 import { Aperture } from "@/components/chapters/Aperture";
 import { ContactSheet } from "@/components/chapters/ContactSheet";
+import { Albums } from "@/components/chapters/Albums";
 import { WorkGallery } from "@/components/chapters/WorkGallery";
-import { StudioNote } from "@/components/chapters/StudioNote";
+import { Coverage } from "@/components/chapters/Coverage";
+import { Leadership } from "@/components/chapters/Leadership";
 import { Services } from "@/components/chapters/Services";
 import { Booking } from "@/components/chapters/Booking";
 import { studio } from "@/lib/studio";
@@ -16,8 +18,10 @@ export default function Home() {
     <>
       <Aperture />
       <ContactSheet />
+      <Albums moreHref="/work" />
       <WorkGallery />
-      <StudioNote />
+      <Coverage />
+      <Leadership />
       <Services />
       <Booking />
 

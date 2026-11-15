@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Services } from "@/components/chapters/Services";
 import { PageHeader } from "@/components/chrome/PageHeader";
 import { Reveal } from "@/components/ui/Reveal";
+import { StudioProp } from "@/components/three/StudioProp";
 import { studio } from "@/lib/studio";
 
 export const metadata: Metadata = {
@@ -22,6 +23,12 @@ export default function ServicesPage() {
           </>
         }
         lede="Every booking is quoted against the day itself — hours, locations and how many of us you need there."
+      />
+
+      {/* the light that makes the difference between a photo and a portrait */}
+      <StudioProp
+        kind="softbox"
+        className="pointer-events-none mx-auto h-[clamp(10rem,20vw,15rem)] w-full max-w-[var(--wide)]"
       />
 
       <Services standalone />

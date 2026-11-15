@@ -136,12 +136,12 @@ export function Booking({ standalone = false }: { standalone?: boolean }) {
       <div className="mx-auto max-w-[1800px]">
         {!standalone && (
           <>
-            <SectionLabel index="08" title="Book a Session" />
+            <SectionLabel index="08" title="Enquire" />
 
             <Reveal className="mt-10 max-w-3xl">
               <p className="title-type text-ink">
-                Tell us what you need.
-                <span className="italic text-accent"> We’ll tell you how.</span>
+                Tell us about your day.
+                <span className="italic text-accent"> We’ll tell you what it takes.</span>
               </p>
             </Reveal>
           </>
@@ -170,7 +170,7 @@ export function Booking({ standalone = false }: { standalone?: boolean }) {
         <div className="mt-20 grid gap-12 lg:grid-cols-[1fr_21rem] lg:gap-14">
           <div>
             <h3 className="mono-label border-b border-[var(--line)] pb-2.5 text-accent">
-              PROJECT INQUIRY
+              YOUR ENQUIRY
             </h3>
 
             {/* Success */}
@@ -357,7 +357,7 @@ export function Booking({ standalone = false }: { standalone?: boolean }) {
                   <div className="sm:col-span-2">
                     <Field
                       id="inq-brief"
-                      label="PROJECT BRIEF"
+                      label="ABOUT YOUR DAY"
                       error={errors.brief}
                       hint={`${values.brief.trim().length} / 2000 characters`}
                       required
@@ -459,7 +459,7 @@ export function Booking({ standalone = false }: { standalone?: boolean }) {
                 ADD YOUR REQUIREMENTS
               </button>
 
-              <p className="mt-4 text-[10px] leading-relaxed text-ink-dim">
+              <p className="mt-4 text-[0.75rem] leading-relaxed text-ink-dim">
                 Prices are shown only where the studio has published them.
                 Everything else is quoted per project.
               </p>
@@ -509,11 +509,11 @@ function Field({
       </label>
       <div className="mt-2">{children}</div>
       {error ? (
-        <p id={`${id}-error`} className="mt-2 text-[11px] text-[#b4432f]">
+        <p id={`${id}-error`} className="mt-2 text-[0.75rem] text-[#b4432f]">
           {error}
         </p>
       ) : hint ? (
-        <p id={`${id}-hint`} className="mt-2 text-[11px] text-ink-dim">
+        <p id={`${id}-hint`} className="mt-2 text-[0.75rem] text-ink-dim">
           {hint}
         </p>
       ) : null}
@@ -562,11 +562,11 @@ function PackageCard({
         </div>
         <div className="flex items-baseline justify-between py-2.5">
           <dt className="mono-label text-ink-dim">TURNAROUND</dt>
-          <dd className="font-mono text-[11px] text-ink">{pkg.turnaround}</dd>
+          <dd className="font-mono text-[0.75rem] text-ink">{pkg.turnaround}</dd>
         </div>
       </dl>
 
-      <p className="mt-6 font-mono text-sm tracking-wider text-accent">
+      <p className="mt-6 font-mono text-sm tracking-wider" style={{ color: "var(--accent-ink)" }}>
         {formatPrice(pkg)}
       </p>
 

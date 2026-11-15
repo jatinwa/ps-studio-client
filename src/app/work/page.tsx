@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { photos } from "@/lib/media/photos";
 import { PhotoWall } from "@/components/photo/PhotoWall";
 import { PageHeader } from "@/components/chrome/PageHeader";
+import { Albums } from "@/components/chapters/Albums";
 import { studio } from "@/lib/studio";
 
 export const metadata: Metadata = {
@@ -23,6 +24,8 @@ export default function WorkPage() {
         }
         lede={`${photos.length} frames from recent weddings, celebrations and portrait sessions. Shown uncropped, in the shape each was taken.`}
       />
+
+      <Albums />
 
       <section
         aria-label="All work"

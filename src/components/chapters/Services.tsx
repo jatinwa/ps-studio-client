@@ -23,7 +23,7 @@ export function Services({ standalone = false }: { standalone?: boolean }) {
             className="mx-auto w-full max-w-[var(--wide)] px-[var(--pad)]">
         {!standalone && (
           <Reveal>
-            <p className="eyebrow">Frame 05 — Services</p>
+            <p className="eyebrow">Services</p>
             <h2 className="title-type mt-3 max-w-[22ch] text-ink">
               Three ways we cover a day.
             </h2>
@@ -46,7 +46,7 @@ export function Services({ standalone = false }: { standalone?: boolean }) {
                 className="h-56 w-full"
               />
               <div className="flex flex-1 flex-col p-6">
-                <h3 className="mono-label" style={{ color: "var(--accent)" }}>
+                <h3 className="mono-label" style={{ color: "var(--accent-ink)" }}>
                   {pkg.name}
                 </h3>
                 <p className="lede mt-3">{pkg.summary}</p>
@@ -67,7 +67,7 @@ export function Services({ standalone = false }: { standalone?: boolean }) {
                   <dd className="mt-1.5 text-sm text-ink">{pkg.turnaround}</dd>
                 </dl>
 
-                <p className="mt-6 font-mono text-sm tracking-wider" style={{ color: "var(--accent)" }}>
+                <p className="mt-6 font-mono text-sm tracking-wider" style={{ color: "var(--accent-ink)" }}>
                   {formatPrice(pkg)}
                 </p>
                 <a

@@ -52,7 +52,7 @@ export function ThemeToggle() {
       className="flex h-9 w-9 items-center justify-center border transition-colors"
       style={{ borderColor: "var(--line)", color: "var(--text-dim)" }}
     >
-      <span aria-hidden className="font-mono text-[0.7rem]">
+      <span aria-hidden className="font-mono text-[0.75rem]">
         {mode === "dark" ? "☾" : "☀"}
       </span>
     </button>

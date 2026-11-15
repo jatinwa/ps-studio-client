@@ -23,7 +23,7 @@ export function WorkGallery() {
         className="mx-auto w-full max-w-[var(--wide)] px-[var(--pad)]"
       >
         <Reveal>
-          <p className="eyebrow">Frame 03 — Selected work</p>
+          <p className="eyebrow">Selected work</p>
           <h2 className="title-type mt-3 max-w-[20ch] text-ink">
             Weddings, celebrations, and the quiet bits in between.
           </h2>

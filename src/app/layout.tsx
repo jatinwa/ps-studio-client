@@ -7,6 +7,8 @@ import { Nav } from "@/components/chrome/Nav";
 import { Footer } from "@/components/chrome/Footer";
 import { GrainOverlay } from "@/components/chrome/GrainOverlay";
 import { FrameRail } from "@/components/chrome/FrameRail";
+import { Intro } from "@/components/chrome/Intro";
+import { LightboxProvider } from "@/components/photo/Lightbox";
 import { studio } from "@/lib/studio";
 
 /*
@@ -124,11 +126,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         >
           Skip to content
         </a>
+        <Intro />
         <SmoothScroll>
           <Nav />
           <FrameRail />
           <main id="main">
-            <MotionBoundary>{children}</MotionBoundary>
+            <LightboxProvider>
+              <MotionBoundary>{children}</MotionBoundary>
+            </LightboxProvider>
           </main>
           <Footer />
         </SmoothScroll>

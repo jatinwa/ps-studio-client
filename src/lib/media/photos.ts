@@ -17,9 +17,45 @@ export interface Photo {
   widths: number[];
 }
 
-export const photos: Photo[] = (raw.photos as Photo[]).slice();
+const all: Photo[] = (raw.photos as Photo[]).slice();
 
-export const byId = new Map(photos.map((p) => [p.id, p]));
+export const byId = new Map(all.map((p) => [p.id, p]));
+
+/*
+ * Portraits of the people who run the studio, not photographs of the work.
+ *
+ * They come out of the same ingest and so land in the same catalogue, but a
+ * headshot of the Chairman turning up between two weddings in the gallery is
+ * nobody's idea of a portfolio. They are held out of every gallery list and
+ * reached by id instead.
+ */
+export const TEAM_IDS = ["chairman", "director", "senior-director"] as const;
+
+/*
+ * Brand files that live in incoming/ alongside the photographs and so come
+ * through the same ingest. They are artwork, not work, and were turning up
+ * between two weddings in the gallery.
+ */
+const NON_PHOTO_IDS = ["shop-logo", "shop-logo-copy"];
+
+/*
+ * Printed album covers with a real couple's name set across them.
+ *
+ * These are the studio's work and they stay in their own album, but a loose
+ * frame in the contact sheet or the gallery wall carries the name out of the
+ * album and onto the front page, where it is nobody's to put. Held out of the
+ * shared pool only: `byId` still resolves them, so the album they belong to
+ * shows them exactly as before.
+ */
+const NAMED_COVER_IDS = ["001-front-acrylic-cover", "002-2", "002-3"];
+
+const isTeam = (p: Photo) =>
+  (TEAM_IDS as readonly string[]).includes(p.id) ||
+  NON_PHOTO_IDS.includes(p.id) ||
+  NAMED_COVER_IDS.includes(p.id);
+
+/** The studio's work — what every gallery draws from. */
+export const photos: Photo[] = all.filter((p) => !isTeam(p));
 
 export const landscape = photos.filter((p) => p.orientation === "landscape");
 export const portrait = photos.filter((p) => p.orientation === "portrait");

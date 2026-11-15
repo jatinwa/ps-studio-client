@@ -13,7 +13,19 @@ import { prefersReducedMotion } from "@/lib/hooks/useReducedMotion";
  * reflow of the type above it; a canvas that *is* the ring is positioned by
  * layout and cannot drift.
  */
-export function LensCore({ className = "" }: { className?: string }) {
+/** What the opening sequence can drive from outside. */
+export interface LensApi {
+  /** 0 = resting, 1 = pushed right into the front element. */
+  setDolly(v: number): void;
+}
+
+export function LensCore({
+  className = "",
+  apiRef,
+}: {
+  className?: string;
+  apiRef?: React.MutableRefObject<LensApi | null>;
+}) {
   const hostRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -26,9 +38,46 @@ export function LensCore({ className = "" }: { className?: string }) {
 
     (async () => {
       const THREE = await import("three");
+      /*
+       * Two addons do most of the realism here. Hard box edges and flat
+       * shading are what made the first body read as a prop: real cameras
+       * have moulded corners, and metal and glass only look like metal and
+       * glass when there is something for them to reflect.
+       */
+      const { RoundedBoxGeometry } = await import(
+        "three/examples/jsm/geometries/RoundedBoxGeometry.js"
+      );
+      const { RoomEnvironment } = await import(
+        "three/examples/jsm/environments/RoomEnvironment.js"
+      );
       if (disposed || !host.isConnected) return;
 
-      const size = () => Math.max(host.clientWidth || 1, 1);
+      /*
+       * Width and height read separately. They used to be one square value,
+       * which was fine while the host was a circle — a camera body is wider
+       * than it is tall, so the frame has to be too or the sides are cropped.
+       */
+      /*
+       * The drawing buffer is a FIXED size, decided from the viewport — not
+       * from the host element.
+       *
+       * The host grows from ~300px to wider than the screen during the push.
+       * Following that with setSize meant reallocating the WebGL buffer on
+       * every frame of the scroll, which is why the camera went blank while
+       * moving and only reappeared once scrolling stopped. The buffer is now
+       * allocated once and the canvas is simply scaled by CSS: at rest it is
+       * displayed smaller than the buffer, at full push roughly 1:1, so it
+       * stays sharp throughout without a single reallocation.
+       *
+       * The host keeps a constant 4:3 aspect, so scaling it never distorts.
+       */
+      const ASPECT = 4 / 3;
+      const bufferWidth = () => {
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        return Math.round(Math.min(window.innerWidth * dpr, 2400));
+      };
+      const w = () => bufferWidth();
+      const h = () => Math.round(bufferWidth() / ASPECT);
 
       let renderer: InstanceType<typeof THREE.WebGLRenderer>;
       try {
@@ -42,20 +91,97 @@ export function LensCore({ className = "" }: { className?: string }) {
         return;
       }
 
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-      renderer.setSize(size(), size(), false);
+      // 1, deliberately: device pixel ratio is already folded into the fixed
+      // buffer size above, and setting it here would square that factor
+      renderer.setPixelRatio(1);
+      renderer.setSize(w(), h(), false);
       renderer.domElement.style.width = "100%";
       renderer.domElement.style.height = "100%";
       renderer.domElement.style.display = "block";
-      renderer.domElement.style.borderRadius = "9999px";
+      // filmic response, so highlights roll off instead of clipping to white
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.15;
       host.appendChild(renderer.domElement);
 
       const scene = new THREE.Scene();
-      const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 50);
-      camera.position.set(0, 0, 4.2);
+
+      // a small studio box, blurred into an environment map; this is what the
+      // barrel, the rim and the glass actually reflect
+      const pmrem = new THREE.PMREMGenerator(renderer);
+      const envRT = pmrem.fromScene(new RoomEnvironment(), 0.05);
+      scene.environment = envRT.texture;
+      const camera = new THREE.PerspectiveCamera(30, ASPECT, 0.1, 50);
+      /*
+       * Pulled back from 4.2 to make room for the body. The host is clipped to
+       * a circle, so anything wider than the frame's inscribed circle is cut:
+       * at this distance a 2.3-wide body sits at radius ~1.5, inside the ~1.9
+       * the circle allows, and nothing important lands on the crop.
+       */
+      /*
+       * The dolly moves this camera rather than scaling the element.
+       * Scaling the canvas in CSS magnifies a fixed grid of pixels and the
+       * whole thing turns to mush by about 2x; moving the camera is a real
+       * approach and stays sharp however close it gets.
+       */
+      const REST_Z = 6.2;
+      const NEAR_Z = 1.25;
+      camera.position.set(0, 0, REST_Z);
 
       const lens = new THREE.Group();
       scene.add(lens);
+
+      /* ─── the camera the lens is mounted on ─── */
+      /*
+       * Two body materials, because a camera is not one surface. The shell is
+       * a near-matte moulding that mostly swallows light; the plates and
+       * dials beside it are machined metal that catches it.
+       */
+      const bodyMat = new THREE.MeshStandardMaterial({
+        color: 0x171412,
+        roughness: 0.86,
+        metalness: 0.12,
+      });
+      const plateMat = new THREE.MeshStandardMaterial({
+        color: 0x2c2823,
+        roughness: 0.34,
+        metalness: 0.9,
+      });
+      const accentMat = new THREE.MeshStandardMaterial({
+        color: 0xd8a84e,
+        roughness: 0.3,
+        metalness: 0.85,
+      });
+
+      const bodyGeo = new RoundedBoxGeometry(3.1, 2.2, 1.0, 6, 0.16);
+      const bodyMesh = new THREE.Mesh(bodyGeo, bodyMat);
+      bodyMesh.position.z = -1.15;
+      lens.add(bodyMesh);
+
+      // the pentaprism hump — the silhouette that makes it read as a camera
+      const prismGeo = new RoundedBoxGeometry(1.12, 0.52, 0.8, 4, 0.07);
+      const prism = new THREE.Mesh(prismGeo, plateMat);
+      prism.position.set(0, 1.34, -1.2);
+      lens.add(prism);
+
+      // hot shoe
+      const shoeGeo = new RoundedBoxGeometry(0.4, 0.1, 0.32, 2, 0.02);
+      const shoe = new THREE.Mesh(shoeGeo, plateMat);
+      shoe.position.set(0, 1.64, -1.2);
+      lens.add(shoe);
+
+      // the grip, offset so the body is not symmetrical and reads as a shape
+      const gripGeo = new RoundedBoxGeometry(0.62, 2.0, 1.08, 5, 0.22);
+      const grip = new THREE.Mesh(gripGeo, bodyMat);
+      grip.position.set(-1.56, -0.1, -1.15);
+      lens.add(grip);
+
+      // shutter release, in the studio's gold
+      const buttonGeo = new THREE.CylinderGeometry(0.1, 0.1, 0.07, 16);
+      const button = new THREE.Mesh(buttonGeo, accentMat);
+      button.rotation.x = Math.PI / 2;
+      button.position.set(-1.52, 1.02, -1.02);
+      lens.add(button);
+
 
       /* ─── barrel ─── */
       const barrelGeo = new THREE.CylinderGeometry(1, 1, 1.1, 48, 1, true);
@@ -69,6 +195,20 @@ export function LensCore({ className = "" }: { className?: string }) {
       barrel.rotation.x = Math.PI / 2;
       barrel.position.z = -0.55;
       lens.add(barrel);
+
+      /* ─── knurled focus ring around the barrel ─── */
+      const focusGeo = new THREE.CylinderGeometry(1.04, 1.04, 0.34, 28, 1, true);
+      const focusMat = new THREE.MeshStandardMaterial({
+        color: 0x201c18,
+        roughness: 0.55,
+        metalness: 0.65,
+        side: THREE.DoubleSide,
+        flatShading: true, // 28 flat facets read as the ribbing on a focus ring
+      });
+      const focus = new THREE.Mesh(focusGeo, focusMat);
+      focus.rotation.x = Math.PI / 2;
+      focus.position.z = -0.42;
+      lens.add(focus);
 
       /* ─── front rim ─── */
       const rimGeo = new THREE.TorusGeometry(0.98, 0.075, 14, 56);
@@ -143,7 +283,13 @@ export function LensCore({ className = "" }: { className?: string }) {
        * code and would read as a hole shrinking, not as blades closing.
        */
       const BLADES = 9;
-      const bladeGeo = new THREE.PlaneGeometry(1.15, 0.95);
+            /*
+       * Sized to stay inside the barrel. At 1.15 wide on a 0.8 pivot the far
+       * corner sat at radius ~1.45, well past the barrel's 1.04 — head-on the
+       * barrel hid it, but the moment the camera turned the blades showed as
+       * spikes around the lens.
+       */
+      const bladeGeo = new THREE.PlaneGeometry(0.78, 0.66);
       const bladeMat = new THREE.MeshStandardMaterial({
         color: 0x0d0b09,
         roughness: 0.78,
@@ -155,7 +301,7 @@ export function LensCore({ className = "" }: { className?: string }) {
         const pivot = new THREE.Group();
         pivot.rotation.z = (i / BLADES) * Math.PI * 2;
         const blade = new THREE.Mesh(bladeGeo, bladeMat);
-        blade.position.set(0.8, 0, -0.06);
+        blade.position.set(0.58, 0, -0.1);
         pivot.add(blade);
         lens.add(pivot);
         blades.push(blade);
@@ -169,21 +315,49 @@ export function LensCore({ className = "" }: { className?: string }) {
       spec.renderOrder = 5;
       lens.add(spec);
 
-      scene.add(new THREE.AmbientLight(0xfff1dd, 1.15));
+      scene.add(new THREE.AmbientLight(0xfff1dd, 0.55));
       const key = new THREE.DirectionalLight(0xffffff, 3.1);
       key.position.set(-2, 2.4, 3);
       scene.add(key);
       const fill = new THREE.PointLight(0xd8a84e, 11, 9, 2);
       fill.position.set(1.6, -1.2, 1.8);
       scene.add(fill);
+      /*
+       * A rim from behind. Without it the dark body sits on a light page as a
+       * flat silhouette — this picks out the top and shoulder so the shape
+       * reads as an object rather than a cut-out.
+       */
+      const rimLight = new THREE.DirectionalLight(0xfff4e2, 2.4);
+      rimLight.position.set(2.4, 2.8, -3.2);
+      scene.add(rimLight);
 
       /* ─── the lens follows the pointer, a little ─── */
+      /*
+       * Measured from the camera's own centre, not the window's, so it turns
+       * to face wherever the cursor actually is rather than leaning on a
+       * window-wide average. The rect is cached and refreshed on scroll and
+       * resize — reading it on every pointer move would force layout
+       * constantly.
+       */
+      let cx = 0;
+      let cy = 0;
+      const recentre = () => {
+        const r = host.getBoundingClientRect();
+        cx = r.left + r.width / 2;
+        cy = r.top + r.height / 2;
+      };
+      recentre();
+
       let pointerX = 0;
       let pointerY = 0;
       const onPointer = (e: PointerEvent) => {
-        pointerX = (e.clientX / window.innerWidth) * 2 - 1;
-        pointerY = (e.clientY / window.innerHeight) * 2 - 1;
+        // normalised against roughly a third of the viewport, so the camera
+        // reaches full turn while the cursor is still near it
+        pointerX = Math.max(-1, Math.min(1, (e.clientX - cx) / (window.innerWidth * 0.32)));
+        pointerY = Math.max(-1, Math.min(1, (e.clientY - cy) / (window.innerHeight * 0.32)));
       };
+      window.addEventListener("scroll", recentre, { passive: true });
+      window.addEventListener("resize", recentre);
       window.addEventListener("pointermove", onPointer, { passive: true });
 
       let onScreen = true;
@@ -192,13 +366,35 @@ export function LensCore({ className = "" }: { className?: string }) {
       });
       io.observe(host);
 
-      const ro = new ResizeObserver(() => {
-        renderer.setSize(size(), size(), false);
-      });
-      ro.observe(host);
+      /*
+       * Only a real viewport change re-allocates, and even then on a debounce.
+       * Observing the host would put us straight back to reallocating the
+       * buffer on every frame of the push.
+       */
+      let resizeTimer = 0;
+      const onViewportResize = () => {
+        window.clearTimeout(resizeTimer);
+        resizeTimer = window.setTimeout(() => {
+          renderer.setSize(w(), h(), false);
+          recentre();
+        }, 180);
+      };
+      window.addEventListener("resize", onViewportResize);
 
       const clock = new THREE.Clock();
       let raf = 0;
+
+      /*
+       * Eased so the last stretch of the push slows as the glass fills the
+       * frame — a linear dolly reads as a zoom, this reads as arriving.
+       */
+      let dolly = 0;
+      const setDolly = (v: number) => {
+        dolly = Math.max(0, Math.min(1, v));
+        const eased = 1 - Math.pow(1 - dolly, 2.2);
+        camera.position.z = REST_Z - (REST_Z - NEAR_Z) * eased;
+      };
+      if (apiRef) apiRef.current = { setDolly };
 
       const draw = () => {
         const t = clock.getElapsedTime();
@@ -208,9 +404,20 @@ export function LensCore({ className = "" }: { className?: string }) {
         const angle = -0.52 + (1 - open) * 1.02;
         for (const blade of blades) blade.rotation.z = angle;
 
-        lens.rotation.y = pointerX * 0.17 + Math.sin(t * 0.3) * 0.02;
-        lens.rotation.x = pointerY * 0.13 + Math.cos(t * 0.26) * 0.02;
-        lens.rotation.z = t * 0.05;
+        /*
+         * Eased towards the cursor rather than snapped to it. The turn is
+         * roughly three times what it was — it used to barely register — and
+         * the lerp keeps a fast flick of the mouse from looking like a twitch.
+         */
+        const targetY = pointerX * 0.62 + Math.sin(t * 0.3) * 0.02;
+        const targetX = pointerY * 0.46 + Math.cos(t * 0.26) * 0.02;
+        lens.rotation.y += (targetY - lens.rotation.y) * 0.085;
+        lens.rotation.x += (targetX - lens.rotation.x) * 0.085;
+        /*
+         * No roll. A slow spin on Z read as "alive" while this was a bare
+         * lens, which is radially symmetric — on a body with a grip and a
+         * prism it reads as the whole camera tumbling.
+         */
 
         ringWarm.scale.setScalar(1 + Math.sin(t * 0.8) * 0.03);
         renderer.render(scene, camera);
@@ -224,16 +431,23 @@ export function LensCore({ className = "" }: { className?: string }) {
 
       if (process.env.NODE_ENV !== "production") {
         Object.assign(window, {
-          __lensCore: { draw, renderer, lens, blades },
+          __lensCore: { draw, renderer, lens, blades, setDolly, camera },
         });
       }
 
       teardown = () => {
+        if (apiRef) apiRef.current = null;
         cancelAnimationFrame(raf);
         io.disconnect();
-        ro.disconnect();
+        window.clearTimeout(resizeTimer);
+        window.removeEventListener("resize", onViewportResize);
         window.removeEventListener("pointermove", onPointer);
-        [barrelGeo, rimGeo, glassGeo, coatGeo, bladeGeo, specGeo, wellGeo].forEach((gm) =>
+        window.removeEventListener("scroll", recentre);
+        window.removeEventListener("resize", recentre);
+        envRT.texture.dispose();
+        pmrem.dispose();
+        [barrelGeo, rimGeo, glassGeo, coatGeo, bladeGeo, specGeo, wellGeo,
+         bodyGeo, prismGeo, shoeGeo, gripGeo, buttonGeo, focusGeo].forEach((gm) =>
           gm.dispose(),
         );
         [
@@ -245,6 +459,10 @@ export function LensCore({ className = "" }: { className?: string }) {
           bladeMat,
           specMat,
           wellMat,
+          bodyMat,
+          plateMat,
+          accentMat,
+          focusMat,
         ].forEach((m) => m.dispose());
         renderer.dispose();
         renderer.domElement.remove();
@@ -255,13 +473,13 @@ export function LensCore({ className = "" }: { className?: string }) {
       disposed = true;
       teardown();
     };
-  }, []);
+  }, [apiRef]);
 
   return (
     <span
       ref={hostRef}
       aria-hidden
-      className={`block h-full w-full overflow-hidden rounded-full ${className}`}
+      className={`block h-full w-full ${className}`}
     />
   );
 }

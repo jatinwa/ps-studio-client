@@ -10,6 +10,7 @@ export function Nav() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [lifted, setLifted] = useState(false);
+  const onHome = pathname === "/";
   const panelRef = useRef<HTMLDivElement | null>(null);
   const toggleRef = useRef<HTMLButtonElement | null>(null);
 
@@ -60,8 +61,17 @@ export function Nav() {
             script, and below roughly 30px its flourishes collapse into an
             unreadable smudge — it needs the height far more than a plain
             lettermark would.
+
+            Held back over the homepage's opening frame, which shows the same
+            wordmark large under the lens. Both were on screen together until
+            the visitor scrolled — the studio's logo twice, at the only moment
+            anyone is looking hardest. It fades in as the opening leaves.
           */}
-          <span aria-hidden className="wordmark h-[32px] sm:h-[38px]" />
+          <span
+            aria-hidden
+            className="wordmark h-[32px] transition-opacity duration-500 sm:h-[38px]"
+            style={{ opacity: onHome && !lifted ? 0 : 1 }}
+          />
           <span className="sr-only">{studio.name}</span>
         </Link>
 
@@ -93,7 +103,7 @@ export function Nav() {
             href="/contact"
             className="focus-frame mono-label hidden border border-[var(--line)] px-4 py-2.5 text-ink transition-colors duration-300 hover:border-accent hover:text-accent sm:block"
           >
-            START A PROJECT
+            ENQUIRE
           </Link>
 
           <button
@@ -156,7 +166,7 @@ export function Nav() {
               onClick={() => setOpen(false)}
               className="focus-frame mono-label block border border-accent px-4 py-4 text-center text-accent"
             >
-              START A PROJECT
+              ENQUIRE
             </Link>
           </div>
         </nav>

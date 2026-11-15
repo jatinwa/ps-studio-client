@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
-import { StudioNote } from "@/components/chapters/StudioNote";
+import { Leadership } from "@/components/chapters/Leadership";
 import { PageHeader } from "@/components/chrome/PageHeader";
 import { PhotoWall } from "@/components/photo/PhotoWall";
+import { StudioProp } from "@/components/three/StudioProp";
 import { landscape, pick } from "@/lib/media/photos";
 import { studio } from "@/lib/studio";
 
@@ -26,13 +27,18 @@ export default function AboutPage() {
         lede={studio.tagline}
       />
 
-      <StudioNote standalone />
+      <Leadership />
 
       <section
         aria-label="From the studio"
         className="w-full py-[clamp(3.5rem,10vh,7rem)]"
       >
         <div className="mx-auto w-full max-w-[var(--wide)] px-[var(--pad)]">
+          {/* a canister of 35mm, for a studio that started on film */}
+          <StudioProp
+            kind="film"
+            className="pointer-events-none mb-4 h-[clamp(9rem,18vw,13rem)] w-full"
+          />
           <p className="eyebrow">Wide frames</p>
           <h2 className="title-type mt-3 max-w-[20ch] text-ink">
             Room, light, and the people in it.

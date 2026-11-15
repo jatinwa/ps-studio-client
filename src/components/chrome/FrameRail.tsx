@@ -220,12 +220,12 @@ export function FrameRail() {
     >
       <span
         className="font-mono text-[1.6rem] font-bold tabular-nums"
-        style={{ color: "var(--accent)" }}
+        style={{ color: "var(--accent-ink)" }}
       >
         {String(index + 1).padStart(2, "0")}
       </span>
       <span
-        className="font-mono text-[0.7rem]"
+        className="font-mono text-[0.75rem]"
         style={{ color: "var(--text-dim)" }}
       >
         / {String(homeSections.length).padStart(2, "0")}
@@ -246,7 +246,7 @@ export function FrameRail() {
       </span>
 
       <span
-        className="mt-2 flex h-32 items-start font-mono text-[0.62rem] uppercase tracking-[0.22em]"
+        className="mt-2 flex h-32 items-start font-mono text-[0.75rem] uppercase tracking-[0.22em]"
         style={{ writingMode: "vertical-rl", color: "var(--text-dim)" }}
       >
         {label}

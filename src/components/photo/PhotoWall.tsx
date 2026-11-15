@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { gsap, ScrollTrigger } from "@/lib/scroll/gsap";
 import { plateReveal, PLATE_MEDIA } from "@/lib/scroll/reveals";
 import { PhotoPlate } from "@/components/photo/PhotoPlate";
+import { useLightbox } from "@/components/photo/Lightbox";
 import type { Photo } from "@/lib/media/photos";
 
 interface PhotoWallProps {
@@ -29,6 +30,7 @@ export function PhotoWall({
   className = "",
 }: PhotoWallProps) {
   const wallRef = useRef<HTMLDivElement | null>(null);
+  const lightbox = useLightbox();
 
   useEffect(() => {
     const wall = wallRef.current;
@@ -81,9 +83,21 @@ export function PhotoWall({
 
   return (
     <div ref={wallRef} className={`${columns} gap-5 ${className}`}>
-      {photos.map((p) => (
+      {photos.map((p, i) => (
         <figure key={p.id} className="mb-5 break-inside-avoid">
-          <PhotoPlate photo={p} selfReveal={false} hover className="w-full" />
+          {/*
+            A button, not a div with a click handler: this opens a dialog, so
+            it has to be reachable and operable from the keyboard like any
+            other control.
+          */}
+          <button
+            type="button"
+            onClick={(e) => lightbox.open(photos, i, e.currentTarget)}
+            aria-label={`Open photograph ${i + 1} of ${photos.length}`}
+            className="focus-frame block w-full cursor-zoom-in"
+          >
+            <PhotoPlate photo={p} selfReveal={false} hover className="w-full" />
+          </button>
         </figure>
       ))}
     </div>

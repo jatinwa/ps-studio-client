@@ -7,6 +7,7 @@ import { plateReveal, PLATE_MEDIA, PLATE_SHEEN } from "@/lib/scroll/reveals";
 import { portrait, pick } from "@/lib/media/photos";
 import { Frame } from "@/components/photo/Frame";
 import { Reveal } from "@/components/ui/Reveal";
+import { useLightbox } from "@/components/photo/Lightbox";
 
 const SHEET = pick(portrait, 12, 0);
 
@@ -28,6 +29,7 @@ const SHEET = pick(portrait, 12, 0);
 export function ContactSheet() {
   const gridRef = useRef<HTMLUListElement | null>(null);
   const sectionRef = useRef<HTMLElement | null>(null);
+  const lightbox = useLightbox();
 
   useEffect(() => {
     if (prefersReducedMotion()) return;
@@ -90,7 +92,7 @@ export function ContactSheet() {
       style={{ backgroundColor: "var(--surface)" }}
     >
       <Reveal className="mx-auto mb-10 w-full max-w-[var(--wide)] px-[var(--pad)]">
-        <p className="eyebrow">Frame 02 — The contact sheet</p>
+        <p className="eyebrow">The contact sheet</p>
         <h2 className="title-type mt-3 max-w-[20ch] text-ink">
           The day, in the order it happened.
         </h2>
@@ -115,6 +117,13 @@ export function ContactSheet() {
             className="sheet-cell group relative aspect-[4/5] overflow-hidden will-change-transform"
             style={{ background: "var(--bg)" }}
           >
+            {/* a real button, because this opens a dialog */}
+            <button
+              type="button"
+              onClick={(e) => lightbox.open(SHEET, i, e.currentTarget)}
+              aria-label={`Open frame ${i + 1} of ${SHEET.length}`}
+              className="focus-frame absolute inset-0 z-[2] cursor-zoom-in"
+            />
             {/*
               Two wrappers on purpose. GSAP writes an inline transform on the
               media element for the settle, and an inline transform beats any
@@ -135,7 +144,7 @@ export function ContactSheet() {
             {/* the frame number, the way it is notched on a real sheet */}
             <span
               aria-hidden
-              className="pointer-events-none absolute left-2 top-2 font-mono text-[0.58rem] tracking-[0.18em]"
+              className="pointer-events-none absolute left-2 top-2 font-mono text-[0.75rem] tracking-[0.18em]"
               style={{
                 color: "var(--bg)",
                 textShadow: "0 1px 6px rgba(0,0,0,0.55)",

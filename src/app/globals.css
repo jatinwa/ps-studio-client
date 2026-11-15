@@ -40,6 +40,15 @@
   --line: rgba(33, 28, 21, 0.14);
   --line-soft: rgba(33, 28, 21, 0.07);
   --accent: #a6712a;
+  /* the gold, darkened only as far as small type needs to clear 4.5:1 */
+  --accent-ink: #855a20;
+  /*
+    The gold for type that sits on a photograph. A photograph is not a theme
+    surface, so this does not flip: the light theme's --accent is a dark
+    brown-gold that disappears into a mid-tone frame and inverts against a
+    bright one. This stays light in both themes, where white type also works.
+  */
+  --accent-lift: #e8c47c;
   --glow: rgba(166, 113, 42, 0.16);
   --sprocket: rgba(33, 28, 21, 0.09);
   --grain-opacity: 0.05;
@@ -56,6 +65,8 @@
   --line: rgba(242, 236, 225, 0.13);
   --line-soft: rgba(242, 236, 225, 0.06);
   --accent: #d8a84e;
+  /* on the dark skin the gold already clears it, so text uses the same */
+  --accent-ink: #d8a84e;
   --glow: rgba(216, 168, 78, 0.2);
   --sprocket: rgba(242, 236, 225, 0.09);
   --grain-opacity: 0.045;
@@ -72,6 +83,7 @@
     --line: rgba(242, 236, 225, 0.13);
     --line-soft: rgba(242, 236, 225, 0.06);
     --accent: #d8a84e;
+    --accent-ink: #d8a84e;
     --glow: rgba(216, 168, 78, 0.2);
     --sprocket: rgba(242, 236, 225, 0.09);
     --grain-opacity: 0.045;
@@ -144,7 +156,7 @@ html.lenis body {
   font-size: var(--text-step--1);
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--accent);
+  color: var(--accent-ink);
 }
 
 @utility lede {
@@ -170,10 +182,19 @@ html.lenis body {
   line-height: 1.12;
 }
 
+/*
+ * 0.75rem, not 0.62.
+ *
+ * At 0.62rem this computed to 9.9px, and it is the class behind the nav
+ * links, the buttons, the eyebrows and every caption — so most of the small
+ * type on the site sat below the ~12px where text stops being comfortable to
+ * read. The tracking comes down slightly because wide letter-spacing on
+ * larger text starts to sprawl.
+ */
 @utility mono-label {
   font-family: var(--font-mono);
-  font-size: 0.62rem;
-  letter-spacing: 0.22em;
+  font-size: 0.75rem;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--text-dim);
 }
@@ -200,6 +221,31 @@ html.lenis body {
   mask-position: center;
   -webkit-mask-size: contain;
   mask-size: contain;
+}
+
+/*
+ * In the dark skin the wordmark is filled with the studio's gold rather than
+ * the page's near-white ink. `currentColor` is still what paints it, so the
+ * nav's hover colour continues to work — only the resting colour changes.
+ */
+:root[data-theme="dark"] .wordmark {
+  color: var(--accent);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .wordmark {
+    color: var(--accent);
+  }
+}
+
+/*
+ * Small type carrying the gold takes the darker variant wherever it is set by
+ * class rather than by the eyebrow utility — the nav's active link, the
+ * booking panel's headings, hover states on the buttons.
+ */
+.mono-label.text-accent,
+.mono-label:hover.text-accent,
+a:hover > .mono-label.text-accent {
+  color: var(--accent-ink);
 }
 
 @utility rule-line {
@@ -293,5 +339,131 @@ html.lenis body {
   .grain-layer,
   .scroll-hint-line {
     animation: none !important;
+  }
+}
+
+/* ───────────────────────────────────────────────────────────
+   First-open sequence (components/chrome/Intro.tsx)
+   A strip of film runs across the screen, the mark rides in
+   on it, then the whole strip is pulled away.
+   ─────────────────────────────────────────────────────────── */
+
+.intro-root {
+  background: var(--bg);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  transition: opacity 0.5s ease;
+}
+
+.intro-strip {
+  position: relative;
+  width: 300vw;
+  height: clamp(8rem, 22vh, 13rem);
+  background: #17130f;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  translate: -62% 0;
+  animation: intro-run 2.4s cubic-bezier(0.33, 0, 0.1, 1) forwards;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.22);
+}
+
+/*
+ * Perforations as a repeating gradient. A strip this wide needs well over a
+ * hundred of them, and that many elements animating is real cost for two
+ * seconds of screen time.
+ */
+.intro-perfs {
+  height: 1.05rem;
+  flex: none;
+  background-image: repeating-linear-gradient(
+    to right,
+    transparent 0 0.58rem,
+    var(--bg) 0.58rem 1.18rem
+  );
+  opacity: 0.92;
+}
+.intro-perfs-top {
+  margin-top: 0.42rem;
+}
+.intro-perfs-bottom {
+  margin-bottom: 0.42rem;
+}
+
+.intro-cells {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0 0.5rem;
+  flex: 1;
+  align-items: stretch;
+}
+
+.intro-cell {
+  flex: 1;
+  border: 1px solid rgba(242, 236, 225, 0.1);
+  background: linear-gradient(
+    115deg,
+    rgba(242, 236, 225, 0.05),
+    rgba(216, 168, 78, 0.12) 45%,
+    rgba(242, 236, 225, 0.03)
+  );
+}
+
+@keyframes intro-run {
+  from {
+    translate: -62% 0;
+  }
+  to {
+    translate: -38% 0;
+  }
+}
+
+.intro-mark {
+  position: absolute;
+  width: clamp(10rem, 24vw, 17rem);
+  aspect-ratio: 1200 / 560;
+  background-color: var(--bg);
+  -webkit-mask-image: url("/brand/wordmark.png");
+  mask-image: url("/brand/wordmark.png");
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  opacity: 0;
+  transform: translateY(14px);
+  transition:
+    opacity 0.5s ease,
+    transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* the mark settles onto the running strip */
+.intro-root[data-state="settle"] .intro-mark {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* then the strip is pulled off and the mark goes with it */
+.intro-root[data-state="pull"] .intro-strip {
+  transition: transform 0.75s cubic-bezier(0.7, 0, 0.2, 1);
+  transform: translateY(-150%) rotate(-4deg);
+}
+.intro-root[data-state="pull"] .intro-mark {
+  opacity: 0;
+  transform: translateY(-26px);
+  transition:
+    opacity 0.3s ease,
+    transform 0.6s cubic-bezier(0.7, 0, 0.2, 1);
+}
+.intro-root[data-state="pull"] {
+  opacity: 0;
+  transition: opacity 0.55s ease 0.25s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .intro-root {
+    display: none;
   }
 }

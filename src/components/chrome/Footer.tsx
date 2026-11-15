@@ -25,7 +25,7 @@ export function Footer() {
               height={782}
               className="h-auto w-[152px]"
             />
-            <p className="mono-label" style={{ color: "var(--accent)" }}>
+            <p className="mono-label" style={{ color: "var(--accent-ink)" }}>
               Since {studio.established}
             </p>
           </div>

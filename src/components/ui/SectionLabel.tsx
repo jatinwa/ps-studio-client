@@ -17,7 +17,7 @@ export function SectionLabel({
     <div className={className}>
       <div className="flex items-baseline gap-4 border-b border-[var(--line)] pb-2.5">
         <span className="mono-label text-accent">CH. {index}</span>
-        <h2 className="font-mono text-[10px] tracking-[0.22em] text-ink-dim uppercase sm:text-[11px]">
+        <h2 className="font-mono text-[0.75rem] tracking-[0.22em] text-ink-dim uppercase">
           {title}
         </h2>
       </div>

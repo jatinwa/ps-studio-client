@@ -50,6 +50,22 @@ async function main() {
   }
 
   const only = process.argv.slice(2);
+
+  /*
+   * Processing a subset used to rewrite the catalogue from just that subset,
+   * silently dropping every other photograph from the site. Existing entries
+   * are carried over and the processed ones replace their old records.
+   */
+  let existing = [];
+  if (only.length) {
+    try {
+      const prev = JSON.parse(await fs.readFile(CATALOGUE, "utf8"));
+      existing = Array.isArray(prev.photos) ? prev.photos : [];
+    } catch {
+      console.warn("  ! no readable catalogue to merge into — writing fresh");
+    }
+  }
+
   const catalogue = [];
   let built = 0;
   let bytes = 0;
@@ -111,6 +127,11 @@ async function main() {
     process.stdout.write(
       `  ✓  ${id.padEnd(26)} ${String(w).padStart(5)}x${String(h).padEnd(5)} ${orientation}\n`,
     );
+  }
+
+  if (only.length && existing.length) {
+    const done = new Set(catalogue.map((p) => p.id));
+    for (const prev of existing) if (!done.has(prev.id)) catalogue.push(prev);
   }
 
   catalogue.sort((a, b) => a.id.localeCompare(b.id));
