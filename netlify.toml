@@ -18,6 +18,21 @@
   # Next 16 needs Node 20+; pinned so the build does not drift with Netlify's default
   NODE_VERSION = "22"
 
+  # Turbopack's persistent cache records the environment it compiled under, so
+  # RESEND_API_KEY ends up inside .sst cache files. Netlify's scanner reads
+  # "all files that are in your site's build, including ... files generated
+  # during the build", finds it there, and fails the deploy.
+  #
+  # Nothing under either path is ever served — they are build caches Netlify
+  # keeps between deploys to make the next one faster. Both are listed because
+  # the glob is anchored at the repo root and `.netlify/.next/cache` is not
+  # matched by `.next/cache`.
+  #
+  # Deliberately NOT SECRETS_SCAN_OMIT_KEYS or SECRETS_SCAN_ENABLED: those
+  # would stop checking this key everywhere, including the output that really
+  # does ship. This narrows the exemption to the two cache directories.
+  SECRETS_SCAN_OMIT_PATHS = ".next/cache/**,.netlify/.next/cache/**"
+
 [[headers]]
   # Photograph derivatives and brand assets are content-addressed by name —
   # a changed photo gets a new filename — so they can be cached hard.
