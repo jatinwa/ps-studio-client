@@ -1,100 +1,97 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-
-const SEEN_KEY = "payal-intro-seen";
+import { useEffect } from "react";
 
 /**
- * The first-open sequence: a strip of film runs across the screen, the studio's
- * mark rides in on it, and then the whole strip pulls away.
+ * Drives the first-open sequence. Renders nothing.
  *
- * Three rules it has to obey, because an intro is the one piece of a site that
- * can hold a visitor hostage:
+ * The strip itself is server-rendered by the root layout (`IntroOverlay`), and
+ * whether it shows at all is decided by `introScript` before the body is
+ * parsed. This component only moves it through its states and hands the page
+ * back — it must never be the thing that puts the overlay on screen, because
+ * anything mounted from an effect arrives after the page has already painted.
  *
- *  - It can never outlast the page. A hard ceiling dismisses it whether or not
- *    anything finished loading.
+ * Three rules it still has to obey, because an intro is the one piece of a
+ * site that can hold a visitor hostage:
+ *
+ *  - It can never outlast the page. There are two ceilings: this one, and a
+ *    blunter one in the head script for the case where React never hydrates.
  *  - It plays once per session, not on every navigation. A beautiful animation
- *    on the fourth page view is an obstacle.
- *  - Reduced motion skips it entirely, and it is removed from the DOM when
- *    done rather than left as an invisible layer over the site.
- *
- * The sprockets are a repeating gradient rather than elements: a strip wide
- * enough to cross a desktop needs well over a hundred perforations, and that
- * many nodes animating is a cost for something on screen for two seconds.
+ *    on the fourth page view is an obstacle. (The head script owns that call.)
+ *  - Reduced motion skips it entirely.
  */
+
+/** Film strip runs, mark settles onto it, strip is pulled away. */
+const SETTLE_AT = 760;
+const PULL_AT = 1700;
+const DONE_AT = 2500;
+
+declare global {
+  interface Window {
+    /** Set by the head script at first paint. */
+    __introStart?: number;
+  }
+}
+
 export function Intro() {
-  const [mounted, setMounted] = useState(false);
-  const [gone, setGone] = useState(false);
-  const rootRef = useRef<HTMLDivElement | null>(null);
-
-  /*
-   * Decided on the client, after mount. Reading sessionStorage during render
-   * would disagree with the server-rendered HTML and trip hydration; this way
-   * the server always renders nothing and the client decides.
-   */
   useEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    let seen = false;
-    try {
-      seen = sessionStorage.getItem(SEEN_KEY) === "1";
-    } catch {
-      /* private mode — treat as unseen, it is only a nicety */
+    const root = document.documentElement;
+    if (root.dataset.intro !== "on") return;
+
+    const node = document.getElementById("intro");
+    if (!node) {
+      root.dataset.intro = "done";
+      return;
     }
-    if (seen) return;
-    try {
-      sessionStorage.setItem(SEEN_KEY, "1");
-    } catch {
-      /* not fatal */
-    }
-    // next tick, so showing the intro is an ordinary update rather than a
-    // synchronous cascade out of the effect body
-    const settle = window.setTimeout(() => setMounted(true), 0);
-    return () => window.clearTimeout(settle);
-  }, []);
-
-  useEffect(() => {
-    if (!mounted) return;
-    const root = rootRef.current;
-    if (!root) return;
-
-    document.documentElement.style.overflow = "hidden";
-
-    let cancelled = false;
-    const finish = () => {
-      if (cancelled) return;
-      cancelled = true;
-      document.documentElement.style.overflow = "";
-      setGone(true);
-    };
 
     /*
-     * The strip runs, the mark settles on it, then the whole thing is pulled
-     * off and the page is handed over. Sequential states rather than one blob
-     * of transitions, so the mark is never on screen at the same time as the
-     * page's own wordmark underneath.
+     * Timings run from FIRST PAINT, not from this effect.
+     *
+     * The strip's CSS animation starts the moment the overlay is painted,
+     * which on a cold load is well before React hydrates. Scheduling from
+     * here would drift the mark out of step with the strip by however long
+     * hydration happened to take — on a slow phone, badly. Measuring from the
+     * stamp the head script left means a late hydration simply finds some of
+     * these already due and fires them at once.
      */
+    const started = window.__introStart ?? Date.now();
+    const after = (ms: number) => Math.max(0, started + ms - Date.now());
+
     const settle = window.setTimeout(() => {
-      root.dataset.state = "settle";
-    }, 760);
+      node.dataset.state = "settle";
+    }, after(SETTLE_AT));
+
     const pull = window.setTimeout(() => {
-      root.dataset.state = "pull";
-    }, 1700);
-    // the ceiling: whatever happens above, the visitor gets the site back
-    const ceiling = window.setTimeout(finish, 2500);
+      node.dataset.state = "pull";
+    }, after(PULL_AT));
+
+    const finish = window.setTimeout(() => {
+      root.dataset.intro = "done";
+    }, after(DONE_AT));
 
     return () => {
       window.clearTimeout(settle);
       window.clearTimeout(pull);
-      window.clearTimeout(ceiling);
-      document.documentElement.style.overflow = "";
+      window.clearTimeout(finish);
+      // whatever happens, the visitor gets the page and its scrollbar back
+      root.dataset.intro = "done";
     };
-  }, [mounted]);
+  }, []);
 
-  if (!mounted || gone) return null;
+  return null;
+}
 
+/**
+ * The strip, rendered on the server so it is in the first paint.
+ *
+ * The sprockets are a repeating gradient rather than elements: a strip wide
+ * enough to cross a desktop needs well over a hundred perforations, and that
+ * many nodes animating is a real cost for something on screen for two seconds.
+ */
+export function IntroOverlay() {
   return (
     <div
-      ref={rootRef}
+      id="intro"
       aria-hidden
       data-state="run"
       className="intro-root pointer-events-none fixed inset-0 z-[200]"
@@ -115,3 +112,19 @@ export function Intro() {
     </div>
   );
 }
+
+/**
+ * Runs synchronously as the first thing in the body, before the browser has
+ * parsed — let alone painted — anything below it. It decides whether the
+ * overlay is shown at all, so the decision costs no frames.
+ *
+ * It reads sessionStorage, which a server render cannot do without disagreeing
+ * with the client and tripping hydration. Doing it here instead of in an
+ * effect is the whole point: by the time an effect could run, the page has
+ * been on screen for a while.
+ *
+ * The 4s timer is a backstop for the case React never hydrates at all — a
+ * chunk that 404s, a browser that chokes. Without it a failed hydration would
+ * leave the visitor staring at a film strip with the page locked behind it.
+ */
+export const introScript = `(function(){var d=document.documentElement,K="payal-intro-seen";try{if(window.matchMedia("(prefers-reduced-motion: reduce)").matches)return;if(sessionStorage.getItem(K)==="1")return;sessionStorage.setItem(K,"1")}catch(e){}d.dataset.intro="on";window.__introStart=Date.now();setTimeout(function(){if(d.dataset.intro==="on")d.dataset.intro="done"},4000)})();`;

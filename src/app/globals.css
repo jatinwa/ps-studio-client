@@ -348,12 +348,34 @@ a:hover > .mono-label.text-accent {
    on it, then the whole strip is pulled away.
    ─────────────────────────────────────────────────────────── */
 
+/*
+ * Hidden unless the inline script in the document head says otherwise.
+ *
+ * The overlay is server-rendered so that it is part of the FIRST paint. It
+ * used to be mounted from an effect, which meant the browser painted the
+ * whole un-hydrated homepage — no camera, nothing pinned, sections stacked —
+ * and the loader slammed over the top of it a few hundred milliseconds later.
+ * Deciding in CSS, from an attribute set before the body is parsed, means
+ * there is no frame in which the wrong thing is on screen.
+ *
+ * No JavaScript at all: the attribute is never set, the overlay never shows,
+ * and the site is simply the site.
+ */
 .intro-root {
+  display: none;
   background: var(--bg);
-  display: grid;
   place-items: center;
   overflow: hidden;
   transition: opacity 0.5s ease;
+}
+
+:root[data-intro="on"] .intro-root {
+  display: grid;
+}
+
+/* nothing moves behind the strip while it is running */
+:root[data-intro="on"] {
+  overflow: hidden;
 }
 
 .intro-strip {
@@ -462,8 +484,16 @@ a:hover > .mono-label.text-accent {
   transition: opacity 0.55s ease 0.25s;
 }
 
+/*
+ * The head script already declines to set the attribute under reduced motion.
+ * This is the backstop, and it has to match that selector's specificity to
+ * beat it.
+ */
 @media (prefers-reduced-motion: reduce) {
-  .intro-root {
+  :root[data-intro="on"] .intro-root {
     display: none;
+  }
+  :root[data-intro="on"] {
+    overflow: visible;
   }
 }

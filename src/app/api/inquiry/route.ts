@@ -109,9 +109,20 @@ export async function POST(request: Request) {
      * Development fallback. Log it so it isn't lost, and be explicit that
      * nothing was delivered — the response below says so too.
      */
+    /*
+     * Which variables this process can actually see, by presence only — never
+     * a value, since these lines land in the hosting dashboard's log.
+     *
+     * Worth printing because the usual cause of this branch in production is
+     * not missing code but an environment variable scoped so the server
+     * function cannot read it, and from the outside that is indistinguishable
+     * from a stale deploy.
+     */
+    const seen = ["RESEND_API_KEY", "INQUIRY_TO", "INQUIRY_WEBHOOK_URL"]
+      .map((k) => `${k}=${process.env[k]?.trim() ? "set" : "MISSING"}`)
+      .join(" ");
     console.warn(
-      "[inquiry] no destination configured (set RESEND_API_KEY, or " +
-        "INQUIRY_WEBHOOK_URL) — nothing was sent.\n" +
+      `[inquiry ${ref}] no destination configured — nothing was sent. ${seen}\n` +
         JSON.stringify(payload, null, 2),
     );
     return json(

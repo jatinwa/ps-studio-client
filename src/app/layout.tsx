@@ -7,7 +7,7 @@ import { Nav } from "@/components/chrome/Nav";
 import { Footer } from "@/components/chrome/Footer";
 import { GrainOverlay } from "@/components/chrome/GrainOverlay";
 import { FrameRail } from "@/components/chrome/FrameRail";
-import { Intro } from "@/components/chrome/Intro";
+import { Intro, IntroOverlay, introScript } from "@/components/chrome/Intro";
 import { LightboxProvider } from "@/components/photo/Lightbox";
 import { studio } from "@/lib/studio";
 
@@ -120,6 +120,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${fraunces.variable} ${archivo.variable} ${spaceMono.variable} antialiased`}
     >
       <body className="bg-bg text-ink">
+        {/*
+          First thing in the body, and deliberately so: it runs while the
+          parser is still here, so the overlay below is either shown or not
+          shown in the very first paint. Anything later means a frame of the
+          un-hydrated page on screen.
+        */}
+        <script dangerouslySetInnerHTML={{ __html: introScript }} />
+        <IntroOverlay />
         <a
           href="#main"
           className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[200] focus:border focus:border-accent focus:bg-[var(--surface)] focus:px-4 focus:py-2 focus:text-xs focus:tracking-widest focus:uppercase"
